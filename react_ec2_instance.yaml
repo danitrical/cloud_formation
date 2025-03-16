@@ -59,11 +59,15 @@ Resources:
   InstanceSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Enable HTTP access
+      GroupDescription: Enable HTTP, SSH access
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: '80'
           ToPort: '80'
+          CidrIp: '0.0.0.0/0'
+        - IpProtocol: tcp
+          FromPort: '20'
+          ToPort: '20'
           CidrIp: '0.0.0.0/0'
 
 Outputs:
