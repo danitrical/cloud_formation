@@ -1,0 +1,72 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: EC2 Instance with Nginx to serve a React app
+
+Parameters:
+  InstanceType:
+    Type: String
+    Default: t2.micro
+    Description: EC2 Instance type (e.g., t2.micro, t2.small, etc.)
+
+  KeyName:
+    Type: String
+    Description: The EC2 KeyPair name for SSH access to the instance.
+  
+  AMIId:
+    Type: String
+    Description: Add the appropriate AMI Id for your region.
+
+Resources:
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      ImageId: !Ref AMIId
+      KeyName: !Ref KeyName
+      SecurityGroupIds:
+        - !Ref InstanceSecurityGroup
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          # Configure Nginx to serve the React app
+          # 1. Install Nginx
+          sudo apt update -y
+          sudo apt install -y nginx
+
+          # 2. Create a new Nginx configuration file or modify the default one
+          echo "server {
+              listen 80;
+
+              server_name _;  # Use _ for a default or specify a domain
+
+              root /var/www/html;  # Nginx root for the React build
+              index index.html;
+
+              location / {
+                  try_files \$uri /index.html;  # Handle SPA (Single Page Application) routing
+              }
+          }" | sudo tee /etc/nginx/sites-available/default > /dev/null
+
+          # Restart Nginx to apply the changes
+          sudo systemctl restart nginx
+
+          # Allow HTTP traffic through the firewall (if using UFW)
+          sudo ufw allow 'Nginx Full'
+          # Install Node.js and Yarn
+          curl -sL https://rpm.nodesource.com/setup_16.x | sudo bash -
+          sudo yum install -y nodejs
+          sudo npm install -g yarn
+
+  InstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable HTTP access
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+          CidrIp: '0.0.0.0/0'
+
+Outputs:
+  InstancePublicIP:
+    Description: "Public IP address of the EC2 instance"
+    Value: !GetAtt EC2Instance.PublicIp
